@@ -3,6 +3,6 @@
 - creating in rust actix web framework
 
 # TODOs
-- [ ] add user auth
+- [x] add user auth for API
 - [ ] minimal frontend
 - [ ] build MVP
