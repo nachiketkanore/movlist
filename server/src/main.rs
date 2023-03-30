@@ -1,3 +1,4 @@
+use std::collections::{hash_map, HashMap};
 use std::sync::Mutex;
 
 use actix_web::dev::Payload;
@@ -215,11 +216,67 @@ async fn test(user: Option<User>, _app_state: web::Data<AppState>) -> impl Respo
     return HttpResponse::Unauthorized().finish();
 }
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+struct ListItem {
+    list_id: String,
+    title: String,
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow, Default, Clone)]
+struct MyList {
+    id: String,
+    name: String,
+    titles: Vec<String>,
+}
+
 // get all the lists for current user
 #[get("my_lists")]
 async fn get_lists(user: User, app_state: web::Data<AppState>) -> impl Responder {
     // TODO
-    return HttpResponse::Ok().json("unimplemented");
+    let list_movies: Vec<ListItem> = sqlx::query_as!(
+        ListItem,
+        r#"
+SELECT
+	lm.list_id , l.name , m.title
+from
+	list_movies lm,
+	movies m,
+	lists l
+where
+	lm.movie_id = m.id and l.id = lm.list_id
+	and lm.email = ?
+order by
+    lm.list_id "#,
+        user.email
+    )
+    .fetch_all(&app_state.pool)
+    .await
+    .unwrap();
+
+    let mut my_lists: Vec<MyList> = Vec::new();
+    let mut add = MyList::default();
+
+    for item in list_movies {
+        if add.titles.is_empty() {
+            add.name = item.name;
+            add.titles.push(item.title);
+            add.id = item.list_id;
+        } else if add.id == item.list_id {
+            add.titles.push(item.title);
+        } else {
+            my_lists.push(add.clone());
+            add.name = item.name;
+            add.titles.clear();
+            add.titles.push(item.title);
+            add.id = item.list_id;
+        }
+    }
+    if !add.titles.is_empty() {
+        my_lists.push(add.clone());
+    }
+
+    return HttpResponse::Ok().json(my_lists);
 }
 
 // create a new list for current user with given movies
@@ -286,6 +343,7 @@ async fn main() -> std::io::Result<()> {
             .service(whoami)
             .service(create_list)
             .service(test)
+            .service(get_lists)
     })
     .bind(("127.0.0.1", 8080))?
     .workers(1)
