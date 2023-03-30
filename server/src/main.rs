@@ -35,9 +35,9 @@ impl FromRequest for User {
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
     // Define the extractor method to retrieve the user from the auth_token cookie
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
-        dbg!("i was here...");
-        println!("from_request called");
-        dbg!(req);
+        // dbg!("i was here...");
+        // println!("from_request called");
+        // dbg!(req);
         let app_state = req.app_data::<web::Data<AppState>>().unwrap().clone();
         let req = req.clone();
         Box::pin(async move {
@@ -58,29 +58,6 @@ impl FromRequest for User {
                 ))),
             }
         })
-        /* let app_state = req
-            .app_data::<Data<Mutex<AppState>>>()
-            .expect("database connection unavailable")
-            .unwrap();
-        // Retrieve the auth_token cookie from the request
-        let auth_token = req
-            .cookie("auth_token")
-            .map(|cookie| cookie.value().to_string());
-
-        // If the auth_token cookie is not present, return an error
-        if auth_token.is_none() {
-            // return futures_util::future::ready(Err(Error::from("nachiket")));
-            return err(ErrorBadRequest("unauthorized"));
-        }
-        let auth_token = auth_token.unwrap();
-
-        // Use the auth_token and database connection to retrieve the user information
-        match get_user_from_token(&auth_token, &app_state).await {
-            Ok(user) => futures_util::future::ready(Ok(user)),
-            Err(_) => {
-                return err(ErrorBadRequest("unauthorized"));
-            }
-        } */
     }
 }
 
@@ -257,6 +234,7 @@ order by
     let mut my_lists: Vec<MyList> = Vec::new();
     let mut add = MyList::default();
 
+    // grouping movies in the same list together
     for item in list_movies {
         if add.titles.is_empty() {
             add.name = item.name;
